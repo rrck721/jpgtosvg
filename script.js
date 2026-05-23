@@ -1,10 +1,13 @@
 // Image Compressor & Converter Tool
 // Client-side only - No backend required
+// Enhanced with proper PNG handling and smart compression
 
 // DOM Elements
 const dragDropArea = document.getElementById('dragDropArea');
 const fileInput = document.getElementById('fileInput');
 const mainContent = document.getElementById('mainContent');
+const uploadCard = document.getElementById('uploadCard');
+const warningMessage = document.getElementById('warningMessage');
 const errorMessage = document.getElementById('errorMessage');
 const originalImage = document.getElementById('originalImage');
 const compressedImage = document.getElementById('compressedImage');
@@ -14,12 +17,16 @@ const savingsPercent = document.getElementById('savingsPercent');
 const qualitySlider = document.getElementById('qualitySlider');
 const qualityValue = document.getElementById('qualityValue');
 const formatSelect = document.getElementById('formatSelect');
+const formatNote = document.getElementById('formatNote');
 const downloadBtn = document.getElementById('downloadBtn');
 const uploadNewBtn = document.getElementById('uploadNewBtn');
 const originalDimensions = document.getElementById('originalDimensions');
 const compressedDimensions = document.getElementById('compressedDimensions');
 const fileFormat = document.getElementById('fileFormat');
 const compressionLevel = document.getElementById('compressionLevel');
+const sizeReduction = document.getElementById('sizeReduction');
+const outputFormat = document.getElementById('outputFormat');
+const qualityGroup = document.getElementById('qualityGroup');
 const toast = document.getElementById('toast');
 const maintainRatioCheckbox = document.getElementById('maintainRatioCheckbox');
 
@@ -66,7 +73,10 @@ function initializeEventListeners() {
     });
 
     // Format Select
-    formatSelect.addEventListener('change', compressImage);
+    formatSelect.addEventListener('change', () => {
+        updateFormatNote();
+        compressImage();
+    });
 
     // Maintain Ratio Checkbox
     maintainRatioCheckbox.addEventListener('change', compressImage);
@@ -86,7 +96,7 @@ function handleFileSelect(file) {
     }
 
     currentFile = file;
-    clearError();
+    clearMessages();
 
     // Read and display original image
     const reader = new FileReader();
@@ -98,10 +108,12 @@ function handleFileSelect(file) {
                 width: img.width,
                 height: img.height,
                 src: img.src,
-                file: file
+                file: file,
+                isOriginalPng: file.type === 'image/png'
             };
 
             updateFileInfo();
+            updateFormatNote();
             compressImage();
             showMainContent();
         };
@@ -110,6 +122,27 @@ function handleFileSelect(file) {
     };
     reader.onerror = () => showError('Failed to read file');
     reader.readAsDataURL(file);
+}
+
+function updateFormatNote() {
+    const format = formatSelect.value;
+    const notes = {
+        jpeg: 'Best for photos. Lossy compression with quality control.',
+        webp: 'Modern format. Smallest file sizes with good quality.',
+        png: 'Lossless format. Quality slider is disabled for PNG.'
+    };
+    formatNote.textContent = notes[format] || '';
+    
+    // Disable quality slider for PNG
+    if (format === 'png') {
+        qualityGroup.style.opacity = '0.6';
+        qualitySlider.disabled = true;
+        qualityValue.textContent = 'N/A';
+    } else {
+        qualityGroup.style.opacity = '1';
+        qualitySlider.disabled = false;
+        qualityValue.textContent = qualitySlider.value + '%';
+    }
 }
 
 function compressImage() {
@@ -123,7 +156,6 @@ function compressImage() {
     const img = new Image();
     
     img.onload = () => {
-        // Set canvas dimensions based on maintain ratio
         canvas.width = img.width;
         canvas.height = img.height;
 
@@ -138,36 +170,109 @@ function compressImage() {
             mimeType = 'image/webp';
         }
 
-        // Convert canvas to blob with quality
-        canvas.toBlob(
-            (blob) => {
-                compressedCanvasData = {
-                    blob: blob,
-                    width: canvas.width,
-                    height: canvas.height,
-                    format: format,
-                    mimeType: mimeType,
-                    quality: quality
-                };
-
-                // Display compressed image
-                const compressedUrl = URL.createObjectURL(blob);
-                compressedImage.src = compressedUrl;
-
-                updateCompressionInfo();
-            },
-            mimeType,
-            quality
-        );
+        // For PNG files, apply smart handling
+        if (format === 'png' && originalCanvasData.isOriginalPng) {
+            // Try lower quality to compress PNG
+            tryCompressWithQuality(canvas, mimeType, 0.9, format);
+        } else if (format === 'png') {
+            // Converting from JPG to PNG - use canvas PNG export
+            canvas.toBlob(
+                (blob) => handleCompressedBlob(blob, format, canvas),
+                mimeType
+            );
+        } else {
+            // JPEG and WebP - use quality parameter
+            canvas.toBlob(
+                (blob) => handleCompressedBlob(blob, format, canvas),
+                mimeType,
+                quality
+            );
+        }
     };
 
     img.onerror = () => showError('Failed to process image');
     img.src = originalCanvasData.src;
 }
 
+function tryCompressWithQuality(canvas, mimeType, quality, format) {
+    // For PNG, try compression with quality parameter
+    canvas.toBlob(
+        (blob) => {
+            // If output is larger than original, suggest WebP
+            if (blob.size > currentFile.size) {
+                showWarning('PNG compression would increase file size. Try WebP instead.');
+                // Use original file as fallback
+                compressedCanvasData = {
+                    blob: currentFile,
+                    width: canvas.width,
+                    height: canvas.height,
+                    format: format,
+                    mimeType: mimeType,
+                    quality: 1,
+                    isOriginal: true
+                };
+            } else {
+                compressedCanvasData = {
+                    blob: blob,
+                    width: canvas.width,
+                    height: canvas.height,
+                    format: format,
+                    mimeType: mimeType,
+                    quality: quality,
+                    isOriginal: false
+                };
+            }
+            
+            const compressedUrl = URL.createObjectURL(compressedCanvasData.blob);
+            compressedImage.src = compressedUrl;
+            updateCompressionInfo();
+        },
+        mimeType,
+        quality
+    );
+}
+
+function handleCompressedBlob(blob, format, canvas) {
+    // Smart compression: if output is larger than original, use original
+    const outputSize = blob.size;
+    const originalSize = currentFile.size;
+    
+    if (outputSize > originalSize) {
+        showWarning(`Output file would be ${formatBytes(outputSize - originalSize)} larger. Using original.`);
+        compressedCanvasData = {
+            blob: currentFile,
+            width: canvas.width,
+            height: canvas.height,
+            format: currentFile.type.split('/')[1],
+            mimeType: currentFile.type,
+            quality: 1,
+            isOriginal: true,
+            exceeded: true
+        };
+        downloadBtn.textContent = '⚠️ Download Original';
+    } else {
+        clearMessages();
+        compressedCanvasData = {
+            blob: blob,
+            width: canvas.width,
+            height: canvas.height,
+            format: format,
+            mimeType: `image/${format}`,
+            quality: parseInt(qualitySlider.value) / 100,
+            isOriginal: false,
+            exceeds: false
+        };
+        downloadBtn.textContent = '⬇️ Download';
+    }
+
+    const compressedUrl = URL.createObjectURL(compressedCanvasData.blob);
+    compressedImage.src = compressedUrl;
+    updateCompressionInfo();
+}
+
 function updateFileInfo() {
-    originalSize.textContent = `Size: ${formatBytes(currentFile.size)}`;
-    originalDimensions.textContent = `${originalCanvasData.width} × ${originalCanvasData.height} px`;
+    originalSize.textContent = formatBytes(currentFile.size);
+    originalDimensions.textContent = `${originalCanvasData.width} × ${originalCanvasData.height}`;
     fileFormat.textContent = currentFile.type.split('/')[1].toUpperCase();
     compressionLevel.textContent = 'Processing...';
 }
@@ -177,25 +282,47 @@ function updateCompressionInfo() {
 
     const originalSizeBytes = currentFile.size;
     const compressedSizeBytes = compressedCanvasData.blob.size;
-    const savings = ((originalSizeBytes - compressedSizeBytes) / originalSizeBytes * 100).toFixed(1);
+    const savingsBytes = originalSizeBytes - compressedSizeBytes;
+    const savingsPercent = (savingsBytes / originalSizeBytes * 100).toFixed(1);
 
-    compressedSize.textContent = `Size: ${formatBytes(compressedSizeBytes)}`;
-    savingsPercent.textContent = `Saved: ${savings}%`;
-    compressedDimensions.textContent = `${compressedCanvasData.width} × ${compressedCanvasData.height} px`;
+    compressedSize.textContent = formatBytes(compressedSizeBytes);
+    compressedDimensions.textContent = `${compressedCanvasData.width} × ${compressedCanvasData.height}`;
+
+    // Handle savings display
+    if (savingsPercent < 0) {
+        // File got larger
+        savingsPercent.innerHTML = `<span style="color: var(--warning);">No saving — file larger by ${formatBytes(Math.abs(savingsBytes))}</span>`;
+        downloadBtn.disabled = false;
+        downloadBtn.style.opacity = '0.7';
+    } else if (savingsPercent === 0) {
+        savingsPercent.innerHTML = 'No change in file size';
+        downloadBtn.disabled = false;
+    } else {
+        savingsPercent.innerHTML = `<span style="color: var(--success);">✓ Saved ${savingsPercent}%</span>`;
+        downloadBtn.disabled = false;
+        downloadBtn.style.opacity = '1';
+    }
+
+    sizeReduction.textContent = formatBytes(Math.abs(savingsBytes));
 
     // Update compression level label
     const quality = parseInt(qualitySlider.value);
+    const format = formatSelect.value;
+    
     let compressionLabel = '';
-    if (quality >= 80) {
-        compressionLabel = 'Low (High Quality)';
+    if (format === 'png') {
+        compressionLabel = 'Lossless';
+    } else if (quality >= 80) {
+        compressionLabel = 'Low compression';
     } else if (quality >= 60) {
-        compressionLabel = 'Medium (Balanced)';
+        compressionLabel = 'Medium compression';
     } else if (quality >= 40) {
-        compressionLabel = 'High (Lower Quality)';
+        compressionLabel = 'High compression';
     } else {
-        compressionLabel = 'Maximum (Very Low Quality)';
+        compressionLabel = 'Maximum compression';
     }
     compressionLevel.textContent = compressionLabel;
+    outputFormat.textContent = format.toUpperCase();
 }
 
 function downloadCompressedImage() {
@@ -204,7 +331,11 @@ function downloadCompressedImage() {
         return;
     }
 
-    const filename = `compressed-${Date.now()}.${compressedCanvasData.format}`;
+    const ext = compressedCanvasData.isOriginal ? 
+        currentFile.name.split('.').pop() : 
+        compressedCanvasData.format;
+    
+    const filename = `compressed-${Date.now()}.${ext}`;
     const url = URL.createObjectURL(compressedCanvasData.blob);
     const a = document.createElement('a');
     a.href = url;
@@ -214,7 +345,7 @@ function downloadCompressedImage() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
-    showToast(`Downloaded: ${filename}`, 'success');
+    showToast(`✓ Downloaded: ${filename}`, 'success');
 }
 
 function resetTool() {
@@ -229,28 +360,39 @@ function resetTool() {
     qualityValue.textContent = '80%';
     formatSelect.value = 'jpeg';
     maintainRatioCheckbox.checked = true;
+    downloadBtn.disabled = false;
+    downloadBtn.textContent = '⬇️ Download';
 
     // Hide main content
     hideMainContent();
-    clearError();
+    clearMessages();
 }
 
 function showMainContent() {
+    uploadCard.style.display = 'none';
     mainContent.classList.remove('hidden');
 }
 
 function hideMainContent() {
+    uploadCard.style.display = 'block';
     mainContent.classList.add('hidden');
 }
 
 function showError(message) {
     errorMessage.textContent = message;
     errorMessage.classList.remove('hidden');
+    warningMessage.classList.add('hidden');
 }
 
-function clearError() {
+function showWarning(message) {
+    warningMessage.textContent = message;
+    warningMessage.classList.remove('hidden');
     errorMessage.classList.add('hidden');
-    errorMessage.textContent = '';
+}
+
+function clearMessages() {
+    errorMessage.classList.add('hidden');
+    warningMessage.classList.add('hidden');
 }
 
 function showToast(message, type = 'success') {
@@ -265,11 +407,11 @@ function showToast(message, type = 'success') {
 
 // Utility function to format bytes
 function formatBytes(bytes, decimals = 2) {
-    if (bytes === 0) return '0 Bytes';
+    if (bytes === 0) return '0 B';
 
     const k = 1024;
     const dm = decimals < 0 ? 0 : decimals;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const sizes = ['B', 'KB', 'MB', 'GB'];
 
     const i = Math.floor(Math.log(bytes) / Math.log(k));
 
