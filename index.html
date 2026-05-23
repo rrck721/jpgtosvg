@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Compressor & Converter</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🖼️ Image Compressor & Converter</h1>
+            <p>Compress and convert your images in seconds - No uploads, 100% client-side</p>
+        </header>
+
+        <!-- Upload Area -->
+        <div class="upload-section">
+            <div class="drag-drop-area" id="dragDropArea">
+                <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+                <h2>Drag & Drop Your Image Here</h2>
+                <p>or click to select (JPG, PNG supported)</p>
+                <input type="file" id="fileInput" accept="image/jpeg,image/png" style="display: none;">
+            </div>
+        </div>
+
+        <!-- Main Content (Hidden until image is uploaded) -->
+        <div id="mainContent" class="hidden">
+            <!-- Image Preview Section -->
+            <div class="preview-section">
+                <div class="preview-container">
+                    <div class="preview-item">
+                        <h3>Original Image</h3>
+                        <div class="image-wrapper">
+                            <img id="originalImage" alt="Original">
+                        </div>
+                        <div class="file-info">
+                            <span id="originalSize" class="size-label">Size: --</span>
+                        </div>
+                    </div>
+
+                    <div class="preview-item">
+                        <h3>Compressed Preview</h3>
+                        <div class="image-wrapper">
+                            <img id="compressedImage" alt="Compressed">
+                        </div>
+                        <div class="file-info">
+                            <span id="compressedSize" class="size-label">Size: --</span>
+                            <span id="savingsPercent" class="savings-label">Saved: --</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Compression Controls -->
+            <div class="controls-section">
+                <div class="control-group">
+                    <label for="qualitySlider">Image Quality</label>
+                    <div class="slider-container">
+                        <input type="range" id="qualitySlider" min="10" max="100" value="80" class="slider">
+                        <span id="qualityValue" class="quality-badge">80%</span>
+                    </div>
+                    <p class="help-text">Higher = Better Quality, Larger File | Lower = Smaller File, Lower Quality</p>
+                </div>
+
+                <div class="control-group">
+                    <label for="formatSelect">Output Format</label>
+                    <select id="formatSelect" class="select-input">
+                        <option value="jpeg">JPEG (Original Format)</option>
+                        <option value="png">PNG (Lossless)</option>
+                        <option value="webp">WebP (Modern, Smaller)</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label>
+                        <input type="checkbox" id="maintainRatioCheckbox" checked>
+                        Maintain Aspect Ratio
+                    </label>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="actions-section">
+                <button id="downloadBtn" class="btn btn-primary">
+                    <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Download Compressed Image
+                </button>
+                <button id="uploadNewBtn" class="btn btn-secondary">
+                    <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 3H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9"></path>
+                        <polyline points="9 3 9 10 22 10"></polyline>
+                    </svg>
+                    Upload Another Image
+                </button>
+            </div>
+
+            <!-- Image Details -->
+            <div class="details-section">
+                <h3>Image Details</h3>
+                <div class="details-grid">
+                    <div class="detail-item">
+                        <span class="detail-label">Original Dimensions:</span>
+                        <span id="originalDimensions" class="detail-value">--</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Compressed Dimensions:</span>
+                        <span id="compressedDimensions" class="detail-value">--</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">File Format:</span>
+                        <span id="fileFormat" class="detail-value">--</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Compression Level:</span>
+                        <span id="compressionLevel" class="detail-value">--</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Error Message -->
+        <div id="errorMessage" class="error-message hidden"></div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast hidden"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>
