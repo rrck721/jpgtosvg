@@ -8,126 +8,140 @@
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>🖼️ Image Compressor & Converter</h1>
-            <p>Compress and convert your images in seconds - No uploads, 100% client-side</p>
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1>Image Compressor</h1>
+                <p>Fast, private image compression - 100% client-side</p>
+            </div>
         </header>
 
         <!-- Upload Area -->
-        <div class="upload-section">
+        <div class="upload-card" id="uploadCard">
             <div class="drag-drop-area" id="dragDropArea">
                 <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                     <polyline points="17 8 12 3 7 8"></polyline>
                     <line x1="12" y1="3" x2="12" y2="15"></line>
                 </svg>
-                <h2>Drag & Drop Your Image Here</h2>
-                <p>or click to select (JPG, PNG supported)</p>
+                <h2>Upload Image</h2>
+                <p>Drag & drop or click to select</p>
+                <span class="file-types">JPG, PNG</span>
                 <input type="file" id="fileInput" accept="image/jpeg,image/png" style="display: none;">
             </div>
         </div>
 
-        <!-- Main Content (Hidden until image is uploaded) -->
+        <!-- Main Content -->
         <div id="mainContent" class="hidden">
-            <!-- Image Preview Section -->
+            <!-- Error/Warning Messages -->
+            <div id="warningMessage" class="message warning hidden"></div>
+            <div id="errorMessage" class="message error hidden"></div>
+
+            <!-- Preview Section -->
             <div class="preview-section">
-                <div class="preview-container">
-                    <div class="preview-item">
-                        <h3>Original Image</h3>
-                        <div class="image-wrapper">
+                <div class="preview-grid">
+                    <div class="preview-card">
+                        <div class="preview-header">
+                            <h3>Original</h3>
+                            <span id="originalSize" class="size-badge">--</span>
+                        </div>
+                        <div class="image-container">
                             <img id="originalImage" alt="Original">
                         </div>
-                        <div class="file-info">
-                            <span id="originalSize" class="size-label">Size: --</span>
+                        <div class="preview-info">
+                            <p id="originalDimensions" class="info-text">-- × --</p>
                         </div>
                     </div>
 
-                    <div class="preview-item">
-                        <h3>Compressed Preview</h3>
-                        <div class="image-wrapper">
+                    <div class="preview-card">
+                        <div class="preview-header">
+                            <h3>Compressed</h3>
+                            <span id="compressedSize" class="size-badge">--</span>
+                        </div>
+                        <div class="image-container">
                             <img id="compressedImage" alt="Compressed">
                         </div>
-                        <div class="file-info">
-                            <span id="compressedSize" class="size-label">Size: --</span>
-                            <span id="savingsPercent" class="savings-label">Saved: --</span>
+                        <div class="preview-info">
+                            <p id="compressedDimensions" class="info-text">-- × --</p>
+                            <p id="savingsPercent" class="savings-text">--</p>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Compression Controls -->
-            <div class="controls-section">
-                <div class="control-group">
-                    <label for="qualitySlider">Image Quality</label>
-                    <div class="slider-container">
-                        <input type="range" id="qualitySlider" min="10" max="100" value="80" class="slider">
-                        <span id="qualityValue" class="quality-badge">80%</span>
-                    </div>
-                    <p class="help-text">Higher = Better Quality, Larger File | Lower = Smaller File, Lower Quality</p>
-                </div>
-
+            <!-- Controls Section -->
+            <div class="controls-card">
                 <div class="control-group">
                     <label for="formatSelect">Output Format</label>
                     <select id="formatSelect" class="select-input">
-                        <option value="jpeg">JPEG (Original Format)</option>
-                        <option value="png">PNG (Lossless)</option>
-                        <option value="webp">WebP (Modern, Smaller)</option>
+                        <option value="jpeg">JPEG (Lossy - Best for photos)</option>
+                        <option value="webp">WebP (Modern - Smallest size)</option>
+                        <option value="png">PNG (Lossless - No quality loss)</option>
                     </select>
+                    <p id="formatNote" class="format-note"></p>
                 </div>
 
-                <div class="control-group">
+                <div class="control-group" id="qualityGroup">
+                    <div class="quality-header">
+                        <label for="qualitySlider">Quality</label>
+                        <span id="qualityValue" class="quality-badge">80%</span>
+                    </div>
+                    <input type="range" id="qualitySlider" min="10" max="100" value="80" class="slider">
+                    <div class="quality-scale">
+                        <span>Smaller</span>
+                        <span>Balanced</span>
+                        <span>Better</span>
+                    </div>
+                </div>
+
+                <div class="control-group" id="advancedGroup">
                     <label>
                         <input type="checkbox" id="maintainRatioCheckbox" checked>
-                        Maintain Aspect Ratio
+                        <span>Maintain aspect ratio</span>
                     </label>
                 </div>
             </div>
 
             <!-- Action Buttons -->
-            <div class="actions-section">
+            <div class="actions-grid">
                 <button id="downloadBtn" class="btn btn-primary">
                     <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                         <polyline points="7 10 12 15 17 10"></polyline>
                         <line x1="12" y1="15" x2="12" y2="3"></line>
                     </svg>
-                    Download Compressed Image
+                    Download
                 </button>
                 <button id="uploadNewBtn" class="btn btn-secondary">
                     <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M9 3H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9"></path>
-                        <polyline points="9 3 9 10 22 10"></polyline>
+                        <path d="M12 5v14M5 12h14"></path>
                     </svg>
-                    Upload Another Image
+                    New Image
                 </button>
             </div>
 
-            <!-- Image Details -->
-            <div class="details-section">
-                <h3>Image Details</h3>
-                <div class="details-grid">
-                    <div class="detail-item">
-                        <span class="detail-label">Original Dimensions:</span>
-                        <span id="originalDimensions" class="detail-value">--</span>
+            <!-- Compression Info -->
+            <div class="info-card">
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="info-label">Original Format</span>
+                        <span id="fileFormat" class="info-value">--</span>
                     </div>
-                    <div class="detail-item">
-                        <span class="detail-label">Compressed Dimensions:</span>
-                        <span id="compressedDimensions" class="detail-value">--</span>
+                    <div class="info-item">
+                        <span class="info-label">Compression</span>
+                        <span id="compressionLevel" class="info-value">--</span>
                     </div>
-                    <div class="detail-item">
-                        <span class="detail-label">File Format:</span>
-                        <span id="fileFormat" class="detail-value">--</span>
+                    <div class="info-item">
+                        <span class="info-label">Size Reduction</span>
+                        <span id="sizeReduction" class="info-value">--</span>
                     </div>
-                    <div class="detail-item">
-                        <span class="detail-label">Compression Level:</span>
-                        <span id="compressionLevel" class="detail-value">--</span>
+                    <div class="info-item">
+                        <span class="info-label">Output Format</span>
+                        <span id="outputFormat" class="info-value">--</span>
                     </div>
                 </div>
             </div>
         </div>
-
-        <!-- Error Message -->
-        <div id="errorMessage" class="error-message hidden"></div>
     </div>
 
     <!-- Toast Notification -->
